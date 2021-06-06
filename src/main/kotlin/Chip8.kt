@@ -9,13 +9,13 @@ class Chip8(val showLogs: Boolean) {
     var onLog: ((String) -> Unit)? = null
     var onPrintScreen: ((IntArray) -> Unit)? = null
 
-    private var running = false
+    private var paused = false
     private var updateScreen = false
-    private var wait = false
     private val START_PC = 0x200
     private val FONT_START_ADDRESS = 0x50
     val VIDEO_WIDTH = 64
     val VIDEO_HEIGHT = 32
+
     private var PC = START_PC  // program counter
     private var memory = UByteArray (4096) // 0xFFF
     private var keys = IntArray(2000)
@@ -31,23 +31,18 @@ class Chip8(val showLogs: Boolean) {
     init {
         log("Emulator started")
         onPrintScreen?.let { it(screen) }
+
+        loadFonts()
     }
 
-    private fun log (message: String) {
-        if (showLogs) {
-            println(message)
-        }
 
-        onLog?.let { it("${LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))} - $message") }
-    }
-
-    fun restart() {
-        running = false
+    private fun restart() {
+        paused = false
         updateScreen = false
-        wait = false
         PC = START_PC
         memory = UByteArray (4096) // 0xFFF
         keys = IntArray(1000)
+        currentKey = 0
         register = IntArray(16) // 0xFF
         i = 0
         stack = IntArray(16)
@@ -57,77 +52,61 @@ class Chip8(val showLogs: Boolean) {
         screen = IntArray(VIDEO_WIDTH * VIDEO_HEIGHT)
 
         log("Emulator restarted")
+        loadFonts()
     }
 
     fun loadRoom (game: InputStream) {
+        restart()
 
-        if (running) {
-            stop()
-            return
-        }
-
-        var index: Int
         game.readBytes().forEachIndexed { i, byte ->
-            index = i
-            memory[0x200 + index] = byte.toUByte()
-
+            memory[START_PC + i] = byte.toUByte()
         }
-
-        loadFonts()
 
         log("Starting game")
-        running = true
-        PC = START_PC
-        SP = 0
-        DT = 0
-        i = 0
-        updateScreen = false
-        wait = false
-
-
-        var lastCycle = 0L
-
-        while (running) {
-
-                val time = System.currentTimeMillis()
-
-                if (time > lastCycle + 2 && running) {
-                    lastCycle = time
-                    cycle()
-                }
-        }
+        paused = false
+        cycle()
     }
 
     fun stop() {
-        running = false
+        paused = true
         log("Emulation paused!")
     }
 
     fun resume() {
-        running = true
+        paused = false
+        cycle()
         log("Emulation resumed!")
     }
 
     private fun cycle() {
-        emulateChipOpcode()
+        var lastCycle = 0L
 
-        if (updateScreen) {
-            onPrintScreen?.let{ it(screen) }
-            updateScreen = false
+        while (!paused) {
+            val time = System.currentTimeMillis()
+
+            if (time > lastCycle + 1 && !paused) {
+                lastCycle = time
+
+                emulateChipOpcode()
+
+                if (updateScreen) {
+                    onPrintScreen?.let{ it(screen) }
+                    updateScreen = false
+                }
+
+                // Decrement the delay timer if it's been set
+                if (DT > 0)
+                {
+                    --DT
+                }
+                // Decrement the sound timer if it's been set
+                if (ST > 0)
+                {
+                    --ST
+                }
+
+            }
         }
-
-        // Decrement the delay timer if it's been set
-        if (DT > 0)
-        {
-            --DT
-        }
-        // Decrement the sound timer if it's been set
-        if (ST > 0)
-        {
-            --ST
-        }
-
-
     }
 
     private fun getOpcode (): Int {
@@ -158,8 +137,9 @@ class Chip8(val showLogs: Boolean) {
                 }
                 0x00EE -> {
                     log("$lPC [$c1 $c2] Return from a subroutine")
-                    SP--
+
                     PC = stack[SP]
+                    SP--
                 }
                 else -> log("$lPC [$c1 $c2] unknown operation 0  ${opcode.toString(16)}")
             }
@@ -169,8 +149,9 @@ class Chip8(val showLogs: Boolean) {
             }
             0x2000 -> {
                 log("$lPC [$c1 $c2] Call subRoutine at ${(opcode and 0x0FFF)}")
-                stack[SP] = PC
                 SP++
+                stack[SP] = PC
+
                 PC = opcode and 0x0FFF
             }
             0x3000 -> {
@@ -199,9 +180,9 @@ class Chip8(val showLogs: Boolean) {
                 log("$lPC [$c1 $c2] Add NN to VX // V[$vx] = ${register[vx]} + ${(opcode and 0x00FF)}")
                 register[vx] += opcode and 0x00FF
 
-//                if (register[vx] > 255) {
-//                    register[vx] -= 256
-//                }
+                if (register[vx] > 255) {
+                    register[vx] -= 256
+                }
             }
             0x8000 -> when (opcode and 0x000F) {
                 0x0000 -> {
@@ -266,9 +247,9 @@ class Chip8(val showLogs: Boolean) {
                     register[0xF] = (register[vx] and 0x80) shr 7
                     register[vx] = register[vx] shl 1
 
-//                    if (register[vx] > 255) {
-//                        register[vx] -= 256
-//                    }
+                    if (register[vx] > 255) {
+                        register[vx] -= 256
+                    }
                 }
                 else -> log("$lPC [$c1 $c2] Unknown operation 8")
             }
@@ -308,22 +289,17 @@ class Chip8(val showLogs: Boolean) {
 
                     for(col in 0 until width ) {
 
-                        if (spriteByte and (0x80 shr col) != 0) {
+                        if (spriteByte and 0x80 != 0) {
                             var x = xPos + col
                             var y = yPos + row
 
                             // prevent overflow
-//                            if(x >= 64) x -= 64
-//                            if(x < 0) x += 64
-//                            if(y >= 32) y -= 32
-//                            if(y < 0)  y += 32
+                            if(x >= 64) x -= 64
+                            if(x < 0) x += 64
+                            if(y >= 32) y -= 32
+                            if(y < 0)  y += 32
 
-                            val screenPixel = y * VIDEO_WIDTH + x
-
-                            if (screenPixel >= screen.size) {
-                                println("$lPC [$c1 $c2] out of bounds wtf $screenPixel , x = $x y = $y  opcode $opcode")
-                            }
-
+                            var screenPixel = (y * VIDEO_WIDTH) + x
 
                             // if pixels are deleted VF = 1 else VF = 0
                             if (screen[screenPixel] != 0) {
@@ -333,9 +309,8 @@ class Chip8(val showLogs: Boolean) {
                             // display sprite on screen
                             screen[screenPixel] = screen[screenPixel] xor 0xF
 
-                            log("draw pixel at $screenPixel -> ${screen[screenPixel]}")
                         }
-                        // spriteByte = spriteByte shl 1
+                         spriteByte = spriteByte shl 1
                     }
                 }
 
@@ -364,7 +339,7 @@ class Chip8(val showLogs: Boolean) {
                 }
                 0x000A -> {
                     log("$lPC [$c1 $c2] wait key press and store it in VX (halt until key)")
-                    wait = true
+
 
                     if (currentKey == 0) {
                         // if no key is found repeat step
@@ -401,14 +376,14 @@ class Chip8(val showLogs: Boolean) {
                 }
                 0x0055 -> {
                     log("$lPC [$c1 $c2] Store v0 to VX in memory at address i")
-                    for(r in 0x0..0xF) {
+                    for(r in 0x0..vx) {
                         memory[r + i] = register[r].toUByte()
                     }
                 }
                 0x0065 -> {
                     log("$lPC [$c1 $c2] Fill V0 to VX from I [$i]")
 
-                    for(r in 0x0..0xF) {
+                    for(r in 0x0..vx) {
                         register[r] = memory[r + i].toInt()
                     }
                 }
@@ -452,6 +427,14 @@ class Chip8(val showLogs: Boolean) {
 
     fun clearKey(key: Int) {
         keys[key] = 0
+    }
+
+    private fun log (message: String) {
+        if (showLogs) {
+            println(message)
+        }
+
+        onLog?.let { it("${LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))} - $message") }
     }
 
 }

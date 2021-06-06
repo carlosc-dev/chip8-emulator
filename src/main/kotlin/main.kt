@@ -26,6 +26,7 @@ import java.io.File
 fun main() {
     System.setProperty("skiko.rendering.laf.global", "true")
 
+    val scope = CoroutineScope(Dispatchers.IO)
     val chip8 = Chip8(false)
     val list = mutableListOf("GUI Started")
     val emptyScreen =  mutableListWithCapacity<Int>(2048)
@@ -70,11 +71,16 @@ fun main() {
                 if (!paused) {
                     paused = true
                     chip8.stop()
+                } else {
+                    paused = false
+                    scope.launch {
+                        chip8.resume()
+                    }
                 }
             },
             onPlay = { path ->
                 val game = File(path).inputStream()
-                val scope = CoroutineScope(Dispatchers.IO)
+
                 scope.launch {
                     chip8.loadRoom(game)
                 }
@@ -83,9 +89,10 @@ fun main() {
             },
             onStop = {
                 chip8.stop()
-                chip8.restart()
+
                 playing = false
                 paused = false
+
                 screenPixels = emptyScreen
             },
             onDebugger = {
