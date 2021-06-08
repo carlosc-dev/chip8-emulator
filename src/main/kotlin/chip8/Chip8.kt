@@ -1,4 +1,4 @@
-
+package chip8
 import java.io.InputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -104,7 +104,6 @@ class Chip8(val showLogs: Boolean) {
                 {
                     --ST
                 }
-
             }
         }
     }
@@ -130,9 +129,7 @@ class Chip8(val showLogs: Boolean) {
             0x0000 -> when(opcode and 0x00FF) {
                 0x00E0 ->  {
                     log("$lPC [$c1 $c2] Clear the screen")
-                    for (i in screen) {
-                        screen[i] = 0x0
-                    }
+                    screen.fill(0x0)
                     updateScreen = true
                 }
                 0x00EE -> {
@@ -207,11 +204,16 @@ class Chip8(val showLogs: Boolean) {
 
                     if (register[vx] > 0xFF) {
                         register[0xF] = 1
+                        register[vx] -= 256
                     } else {
                         register[0xF] = 0
                     }
 
                     register[vx] = register[vx] and 0xFF
+
+                    if(register[vx] > 255){
+                        register[vx] -= 256
+                    }
                 }
                 0x0005 -> {
                     log("$lPC [$c1 $c2] Vx = Vx - Vy borrow ? VF=0 else VF=1")
@@ -223,12 +225,20 @@ class Chip8(val showLogs: Boolean) {
                     }
 
                     register[vx] = register[vx] - register[vy]
+
+                    if (register[vx] < 0) {
+                        register[vx] += 256
+                    }
                 }
                 0x0006 -> {
-                    log("$lPC [$c1 $c2] less significant bit of VX to VF then VX >> 1 ")
+                    log("$lPC [$c1 $c2] less significant bit of v[$vx] (${register[vx]}) = (${(register[vx] and 0x1)}) to VF then VX >> 1 = ${register[vx] shr 1}")
 
                     register[0xF] = register[vx] and 0x1
                     register[vx] = register[vx] shr 1
+
+                    if (register[vx] > 255) {
+                        register[vx] -= 256
+                    }
                 }
                 0x0007 -> {
                     log("$lPC [$c1 $c2] VX = VY - VX borrow? VF=0 else VF=1")
@@ -240,16 +250,16 @@ class Chip8(val showLogs: Boolean) {
                     }
 
                     register[vx] = register[vy] - register[vx]
+
+                    if(register[vx] < 0){
+                        register[vx] += 256
+                    }
                 }
                 0x000E -> {
-                    log("$lPC [$c1 $c2] most significant bit of VX to VF then VX << 1")
-
+                    log("$lPC [$c1 $c2] most significant bit of V[$vx] (${register[vx]}) = (${+(register[vx] and 0x80)}) to VF then V[$vx] << 1 = ${register[vx] shl 1}")
                     register[0xF] = (register[vx] and 0x80) shr 7
                     register[vx] = register[vx] shl 1
 
-                    if (register[vx] > 255) {
-                        register[vx] -= 256
-                    }
                 }
                 else -> log("$lPC [$c1 $c2] Unknown operation 8")
             }
@@ -290,16 +300,16 @@ class Chip8(val showLogs: Boolean) {
                     for(col in 0 until width ) {
 
                         if (spriteByte and 0x80 != 0) {
-                            var x = xPos + col
-                            var y = yPos + row
+                            var x = (xPos + col) % VIDEO_WIDTH
+                            var y = (yPos + row) % VIDEO_HEIGHT
 
                             // prevent overflow
-                            if(x >= 64) x -= 64
-                            if(x < 0) x += 64
-                            if(y >= 32) y -= 32
-                            if(y < 0)  y += 32
+//                            if(x >= 64) x -= 64
+//                            if(x < 0) x += 64
+//                            if(y >= 32) y -= 32
+//                            if(y < 0)  y += 32
 
-                            var screenPixel = (y * VIDEO_WIDTH) + x
+                            var screenPixel = (y * VIDEO_WIDTH ) + x
 
                             // if pixels are deleted VF = 1 else VF = 0
                             if (screen[screenPixel] != 0) {
@@ -312,19 +322,20 @@ class Chip8(val showLogs: Boolean) {
                         }
                          spriteByte = spriteByte shl 1
                     }
+                    updateScreen = true
                 }
 
-                updateScreen = true
+
             }
             0xE000 -> when(opcode and 0x00FF) {
                 0x009E -> {
-                    log("$lPC [$c1 $c2] Skip next if key in VX is pressed")
+                    log("$lPC [$c1 $c2] Skip next if key in V[$vx] is pressed /// ${keys[register[vx]]}")
                     if (keys[register[vx]] == 1) {
                         PC += 2
                     }
                 }
                 0x00A1 -> {
-                    log("$lPC [$c1 $c2] Skip next if key [${register[vx]}] in VX [${vx}] not pressed")
+                    log("$lPC [$c1 $c2] Skip next if key [${register[vx]}] in V[${vx}] not pressed, key = ${keys[register[vx]]}")
 
                     if (keys[register[vx]] == 0) {
                         PC += 2
@@ -338,8 +349,7 @@ class Chip8(val showLogs: Boolean) {
                     register[vx] = DT
                 }
                 0x000A -> {
-                    log("$lPC [$c1 $c2] wait key press and store it in VX (halt until key)")
-
+                    log("$lPC [$c1 $c2] wait key press and store it in V[$vx] = key ($currentKey) (halt until key)")
 
                     if (currentKey == 0) {
                         // if no key is found repeat step
@@ -378,13 +388,15 @@ class Chip8(val showLogs: Boolean) {
                     log("$lPC [$c1 $c2] Store v0 to VX in memory at address i")
                     for(r in 0x0..vx) {
                         memory[r + i] = register[r].toUByte()
+                        log("save mem[${r + i} = V[$r] (${register[r]}) ")
                     }
                 }
                 0x0065 -> {
-                    log("$lPC [$c1 $c2] Fill V0 to VX from I [$i]")
+                    log("$lPC [$c1 $c2] Fill V0 to V[$vx] from I [$i]")
 
                     for(r in 0x0..vx) {
                         register[r] = memory[r + i].toInt()
+                        log("fill V[$r} = ${memory[r + i].toInt()}")
                     }
                 }
                 else -> log("$lPC [$c1 $c2] unknown operation F")
@@ -420,13 +432,16 @@ class Chip8(val showLogs: Boolean) {
         log("${fontSet.size} fonts loaded in to memory")
     }
 
-    fun setKeyPress(key: Int) {
+    fun setKey(key: Int) {
         currentKey = key
         keys[key] = 1
+        log("key press $key")
     }
 
     fun clearKey(key: Int) {
+        currentKey = 0
         keys[key] = 0
+        log("key released $key")
     }
 
     private fun log (message: String) {

@@ -1,25 +1,24 @@
-
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.shortcuts
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.*
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowSize
+import androidx.compose.ui.window.application
+import chip8.Chip8
 import chip8.chip8KeyMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import ui.Debugger
-import ui.EmulatorScreen
-import ui.EmulatorWindow
-import ui.MyWindowState
+import ui.*
 import java.io.File
+
 
 @OptIn(ExperimentalComposeUiApi::class)
 @ExperimentalUnsignedTypes
@@ -31,6 +30,7 @@ fun main() {
     val list = mutableListOf("GUI Started")
     val emptyScreen =  mutableListWithCapacity<Int>(2048)
 
+    startKeyboardListener(chip8KeyMap, onKeyDown = chip8::setKey, onKeyUp = chip8::clearKey)
 
     application {
 
@@ -100,14 +100,7 @@ fun main() {
             },
         ) {
             MaterialTheme {
-                EmulatorScreen(screenPixels, Modifier.fillMaxWidth().fillMaxHeight().onKeyEvent {
-                    println("yoooo")
-                    if (chip8KeyMap[it.key] != null) {
-                        println("yoooo")
-                    }
-
-                    true
-                })
+                EmulatorScreen(screenPixels, Modifier.fillMaxWidth().fillMaxHeight())
             }
         }
     }
@@ -115,9 +108,6 @@ fun main() {
 
 fun <T> mutableListWithCapacity(capacity: Int): MutableList<T> =
     ArrayList(capacity)
-
-
-
 
 
 
