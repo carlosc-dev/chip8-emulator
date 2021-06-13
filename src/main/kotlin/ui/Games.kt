@@ -5,7 +5,7 @@ val gameRooms: Map<String, String> = mapOf(
     "Pong" to "C:\\Users\\pipo\\IdeaProjects\\chip8\\src\\main\\kotlin\\roms\\Pong (alt).ch8",
     "Space Invaders" to "C:\\Users\\pipo\\IdeaProjects\\chip8\\src\\main\\kotlin\\roms\\Space Invaders [David Winter].ch8",
     "IBM Logo" to "C:\\Users\\pipo\\IdeaProjects\\chip8\\src\\main\\kotlin\\roms\\IBM Logo.ch8",
-    "BC_test" to "C:\\Users\\pipo\\IdeaProjects\\Chip8\\src\\main\\kotlin\\roms\\IBM Logo.ch8",
+    "BC_test" to "C:\\Users\\pipo\\IdeaProjects\\Chip8\\src\\main\\kotlin\\roms\\BC_test.ch8",
     "Keyboard test" to "C:\\Users\\pipo\\IdeaProjects\\chip8\\src\\main\\kotlin\\roms\\Keypad Test [Hap, 2006].ch8",
     "Random Number test" to "C:\\Users\\pipo\\IdeaProjects\\chip8\\src\\main\\kotlin\\roms\\Random Number Test [Matthew Mikolay, 2010].ch8",
     "Particle Demo" to "C:\\Users\\pipo\\IdeaProjects\\chip8\\src\\main\\kotlin\\roms\\Particle Demo [zeroZshadow, 2008].ch8",
