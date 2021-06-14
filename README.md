@@ -5,6 +5,7 @@ Basic chip8 emulator
 ## TODO:
 
 - add Sound
+- open game files
 
 ## Kotlin Jetpack desktop
 
