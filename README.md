@@ -2,6 +2,10 @@
 
 Basic chip8 emulator
 
+## TODO:
+
+- add Sound
+
 ## Kotlin Jetpack desktop
 
 https://github.com/JetBrains/compose-jb
