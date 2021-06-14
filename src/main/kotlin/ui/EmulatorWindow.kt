@@ -3,6 +3,7 @@ package ui
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.*
+import kotlin.system.exitProcess
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -32,7 +33,9 @@ fun EmulatorWindow(
                 }
             }
             Separator()
-            Item("Exit", onClick = { })
+            Item("Exit", onClick = {
+                exitProcess(-1)
+            })
         }
         Menu("Options") {
             Item( if (showDebugger) "Hide Debugger" else "Show Debugger", onClick = {

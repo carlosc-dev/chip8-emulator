@@ -310,33 +310,15 @@ private fun setRand(chip8: Chip8, opcode: Opcode) {
  * 0xDxyn - Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
  */
 private fun draw(chip8: Chip8, opcode: Opcode) {
-//    val height = opcode.n
-//    val width = 8
-
-    chip8.V[0xF] = 0
-
-//    for (byte in 0 until height) {
-//        var spriteByte = chip8.memory[chip8.i + byte].toInt()
-//        var y = (chip8.V[opcode.y] + byte) % chip8.VIDEO_HEIGHT
-//
-//        for(bit in 0 until width ) {
-//            if (spriteByte and 0x80 != 0) {
-//                var x = (chip8.V[opcode.x] + bit) % chip8.VIDEO_WIDTH
-//
-//                val screenPos = x + (y * chip8.VIDEO_WIDTH)
-//
-//                if (chip8.screen[screenPos] != 0) {
-//                    chip8.V[0xF] = 1
-//                }
-//                // draw screen
-//                chip8.screen[screenPos] = chip8.screen[screenPos] xor 0xF
-//            }
-//            spriteByte = spriteByte shl 1
-//        }
-//    }
+    if (chip8.screen == null) {
+        chip8.log("SCREEN NULL")
+        return
+    }
 
     val height = 0 until opcode.n
     val width = 0  until 8
+
+    chip8.V[0xF] = 0
 
     height.forEach { byte ->
         var spriteByte = chip8.memory[chip8.i + byte].toInt()
@@ -348,11 +330,11 @@ private fun draw(chip8: Chip8, opcode: Opcode) {
 
                 val screenPos = x + (y * chip8.VIDEO_WIDTH)
 
-                if (chip8.screen[screenPos] != 0) {
+                if (chip8.screen!![screenPos] != 0) {
                     chip8.V[0xF] = 1
                 }
                 // draw screen
-                chip8.screen[screenPos] = chip8.screen[screenPos] xor 0xF
+                chip8.screen!![screenPos] = chip8.screen!![screenPos] xor 0xF
             }
             spriteByte = spriteByte shl 1
 

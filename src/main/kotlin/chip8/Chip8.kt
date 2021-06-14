@@ -1,4 +1,5 @@
 package chip8
+import mutableListWithCapacity
 import java.io.InputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -8,7 +9,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.experimental.and
 
 @ExperimentalUnsignedTypes
-open class Chip8(val showLogs: Boolean) {
+open class Chip8(var showLogs: Boolean) {
     var onLog: ((String) -> Unit)? = null
     var onPrintScreen: ((IntArray) -> Unit)? = null
 
@@ -153,10 +154,8 @@ open class Chip8(val showLogs: Boolean) {
     fun log (message: String) {
         if (showLogs) {
             println(message)
-           // onLog?.let { it("${LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))} - $message") }
+            onLog?.let { it("${LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))} - $message") }
         }
-
-
     }
 
 }

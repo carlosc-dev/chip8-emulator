@@ -13,9 +13,6 @@ import androidx.compose.ui.window.WindowSize
 import androidx.compose.ui.window.application
 import chip8.Chip8
 import chip8.chip8KeyMap
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import ui.*
 import java.io.File
 
@@ -25,15 +22,14 @@ import java.io.File
 fun main() {
     System.setProperty("skiko.rendering.laf.global", "true")
 
-    val scope = CoroutineScope(Dispatchers.IO)
-    val chip8 = Chip8(false)
-    val list = mutableListOf("GUI Started")
     val emptyScreen =  mutableListWithCapacity<Int>(2048)
+    val list = mutableListOf("GUI Started")
+
+    val chip8 = Chip8(false)
 
     startKeyboardListener(chip8KeyMap, onKeyDown = chip8::setKey, onKeyUp = chip8::clearKey)
 
     application {
-
         var logs by remember { mutableStateOf(list) }
         var screenPixels by remember { mutableStateOf(emptyScreen) }
         var playing by remember { mutableStateOf(false) }
@@ -53,11 +49,13 @@ fun main() {
         }
 
         chip8.onPrintScreen = fun(pixels: IntArray) {
-            screenPixels = pixels.map { i -> i } as MutableList<Int>
+            screenPixels = pixels.toMutableList()
         }
 
+        chip8.showLogs = showDebugger
+
         if (showDebugger) {
-            Window (title = "Debugger") {
+            Window(title = "Debugger", onCloseRequest = { showDebugger = false}) {
                 Debugger(logs)
             }
         }
@@ -73,17 +71,12 @@ fun main() {
                     chip8.stop()
                 } else {
                     paused = false
-//                    scope.launch {
-                        chip8.resume()
-//                    }
+                    chip8.resume()
                 }
             },
             onPlay = { path ->
                 val game = File(path).inputStream()
-
-//                scope.launch {
-                    chip8.loadRoom(game)
-//                }
+                chip8.loadRoom(game)
                 playing = true
                 paused = false
             },
@@ -96,7 +89,7 @@ fun main() {
                 screenPixels = emptyScreen
             },
             onDebugger = {
-               showDebugger = true
+               showDebugger = !showDebugger
             },
         ) {
             MaterialTheme {
