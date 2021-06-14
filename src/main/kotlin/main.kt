@@ -16,7 +16,6 @@ import chip8.chip8KeyMap
 import ui.*
 import java.io.File
 
-
 @OptIn(ExperimentalComposeUiApi::class)
 @ExperimentalUnsignedTypes
 fun main() {
@@ -24,7 +23,6 @@ fun main() {
 
     val emptyScreen =  mutableListWithCapacity<Int>(2048)
     val list = mutableListOf("GUI Started")
-
     val chip8 = Chip8(false)
 
     startKeyboardListener(chip8KeyMap, onKeyDown = chip8::setKey, onKeyUp = chip8::clearKey)

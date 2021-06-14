@@ -1,5 +1,5 @@
 package chip8
-import mutableListWithCapacity
+
 import java.io.InputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -13,7 +13,6 @@ open class Chip8(var showLogs: Boolean) {
     var onLog: ((String) -> Unit)? = null
     var onPrintScreen: ((IntArray) -> Unit)? = null
 
-    private var paused = false
     private val START_PC = 0x200
     val FONT_START_ADDRESS = 0x50
     val VIDEO_WIDTH = 64
@@ -31,6 +30,7 @@ open class Chip8(var showLogs: Boolean) {
     var DT = 0     // delay timer
     var screen = IntArray(VIDEO_WIDTH * VIDEO_HEIGHT)
 
+    private val executor = Executors.newSingleThreadScheduledExecutor()
     private var cpuFuture: ScheduledFuture<*>? = null
     private var timerFuture: ScheduledFuture<*>? = null
 
@@ -42,7 +42,6 @@ open class Chip8(var showLogs: Boolean) {
     }
 
     private fun restart() {
-        paused = false
         PC = START_PC
         memory = UByteArray (4096) // 0xFFF
         keys = IntArray(1000)
@@ -67,49 +66,38 @@ open class Chip8(var showLogs: Boolean) {
         }
 
         log("Starting game")
-        paused = false
+
         startTimers()
     }
 
     private fun startTimers() {
         val cpuTick = Runnable {
-            cycle()
+            Opcode
+                .decode(memory[PC], memory[PC + 1])
+                .execute(this)
         }
 
         val timerTick = Runnable {
             // Decrement the delay timer if it's been set
-            if (DT > 0)
-            {
-                DT--
-            }
+            if (DT > 0) DT--
             // Decrement the sound timer if it's been set
-            if (ST > 0)
-            {
-                ST--
-            }
+            if (ST > 0) ST--
         }
 
-        cpuFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(cpuTick,0, 1_000_000L / cpuClockHz, TimeUnit.MICROSECONDS)
-        timerFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(timerTick, 0 , 16L, TimeUnit.MILLISECONDS)
+        cpuFuture = executor.scheduleAtFixedRate(cpuTick,0, 1_000_000L / cpuClockHz, TimeUnit.MICROSECONDS)
+        timerFuture = executor.scheduleAtFixedRate(timerTick, 0 , 16L, TimeUnit.MILLISECONDS)
     }
 
     fun stop() {
         cpuFuture?.cancel(true)
         timerFuture?.cancel(true)
-        paused = true
+
         log("Emulation paused!")
     }
 
     fun resume() {
-        paused = false
         startTimers()
         log("Emulation resumed!")
-    }
-
-    private fun cycle() {
-        Opcode
-            .decode(memory[PC], memory[PC + 1])
-            .execute(this)
     }
 
     private fun loadFonts () {
@@ -157,6 +145,5 @@ open class Chip8(var showLogs: Boolean) {
             onLog?.let { it("${LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))} - $message") }
         }
     }
-
 }
 
