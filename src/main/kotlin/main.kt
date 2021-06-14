@@ -73,17 +73,17 @@ fun main() {
                     chip8.stop()
                 } else {
                     paused = false
-                    scope.launch {
+//                    scope.launch {
                         chip8.resume()
-                    }
+//                    }
                 }
             },
             onPlay = { path ->
                 val game = File(path).inputStream()
 
-                scope.launch {
+//                scope.launch {
                     chip8.loadRoom(game)
-                }
+//                }
                 playing = true
                 paused = false
             },

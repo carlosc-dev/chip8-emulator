@@ -2,8 +2,10 @@ package chip8
 import java.io.InputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import kotlin.experimental.and
-import kotlin.random.Random
 
 @ExperimentalUnsignedTypes
 open class Chip8(val showLogs: Boolean) {
@@ -15,7 +17,7 @@ open class Chip8(val showLogs: Boolean) {
     val FONT_START_ADDRESS = 0x50
     val VIDEO_WIDTH = 64
     val VIDEO_HEIGHT = 32
-
+    var cpuClockHz: Long = 500
     var PC = START_PC  // program counter
     var memory = UByteArray (4096) // 0xFFF
     var keys = IntArray(2000)
@@ -27,6 +29,9 @@ open class Chip8(val showLogs: Boolean) {
     var ST = 0     // sound timer
     var DT = 0     // delay timer
     var screen = IntArray(VIDEO_WIDTH * VIDEO_HEIGHT)
+
+    private var cpuFuture: ScheduledFuture<*>? = null
+    private var timerFuture: ScheduledFuture<*>? = null
 
     init {
         log("Emulator started")
@@ -62,46 +67,48 @@ open class Chip8(val showLogs: Boolean) {
 
         log("Starting game")
         paused = false
-        cycle()
+        startTimers()
+    }
+
+    private fun startTimers() {
+        val cpuTick = Runnable {
+            cycle()
+        }
+
+        val timerTick = Runnable {
+            // Decrement the delay timer if it's been set
+            if (DT > 0)
+            {
+                DT--
+            }
+            // Decrement the sound timer if it's been set
+            if (ST > 0)
+            {
+                ST--
+            }
+        }
+
+        cpuFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(cpuTick,0, 1_000_000L / cpuClockHz, TimeUnit.MICROSECONDS)
+        timerFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(timerTick, 0 , 16L, TimeUnit.MILLISECONDS)
     }
 
     fun stop() {
+        cpuFuture?.cancel(true)
+        timerFuture?.cancel(true)
         paused = true
         log("Emulation paused!")
     }
 
     fun resume() {
         paused = false
-        cycle()
+        startTimers()
         log("Emulation resumed!")
     }
 
     private fun cycle() {
-        var lastCycle = 0L
-
-        while (!paused) {
-            val time = System.currentTimeMillis()
-
-            if (time > lastCycle + 1 && !paused) {
-                lastCycle = time
-
-                Opcode
-                    .decode(memory[PC], memory[PC + 1])
-                    .execute(this)
-
-
-                // Decrement the delay timer if it's been set
-                if (DT > 0)
-                {
-                    --DT
-                }
-                // Decrement the sound timer if it's been set
-                if (ST > 0)
-                {
-                    --ST
-                }
-            }
-        }
+        Opcode
+            .decode(memory[PC], memory[PC + 1])
+            .execute(this)
     }
 
     private fun loadFonts () {
@@ -146,9 +153,10 @@ open class Chip8(val showLogs: Boolean) {
     fun log (message: String) {
         if (showLogs) {
             println(message)
+           // onLog?.let { it("${LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))} - $message") }
         }
 
-        onLog?.let { it("${LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))} - $message") }
+
     }
 
 }
