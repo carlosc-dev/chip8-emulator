@@ -18,8 +18,8 @@ https://github.com/JetBrains/compose-jb
 ## kotlin help proj
 
 - https://github.com/cbeust/chip-8
-- https://en.m.wikipedia.org/wiki/Bit_numbering
 
 ## util links
 
-https://www.rapidtables.com/convert/number/hex-to-decimal.html
+- https://www.rapidtables.com/convert/number/hex-to-decimal.html
+- https://en.m.wikipedia.org/wiki/Bit_numbering
