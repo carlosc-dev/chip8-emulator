@@ -23,7 +23,7 @@ fun main() {
 
     val emptyScreen =  mutableListWithCapacity<Int>(2048)
     val list = mutableListOf("GUI Started")
-    val chip8 = Chip8(false)
+    val chip8 = Chip8(showLogs = false, soundEnabled = false)
 
     startKeyboardListener(chip8KeyMap, onKeyDown = chip8::setKey, onKeyUp = chip8::clearKey)
 
@@ -63,6 +63,7 @@ fun main() {
             playing,
             paused,
             showDebugger,
+            chip8.soundEnabled,
             onPause = {
                 if (!paused) {
                     paused = true
@@ -85,6 +86,9 @@ fun main() {
                 paused = false
 
                 screenPixels = emptyScreen
+            },
+            onMute = {
+                chip8.soundEnabled = !chip8.soundEnabled
             },
             onDebugger = {
                showDebugger = !showDebugger

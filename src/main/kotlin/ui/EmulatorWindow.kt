@@ -12,9 +12,11 @@ fun EmulatorWindow(
     playing: Boolean,
     paused: Boolean,
     showDebugger: Boolean,
+    soundEnabled: Boolean,
     onStop: () -> Unit,
     onPlay: (String) -> Unit,
     onPause: () -> Unit,
+    onMute: () -> Unit,
     onDebugger: () -> Unit,
     content: @Composable WindowScope.() -> Unit
 ) = Window(title = state.title, state = rememberWindowState(size = state.size)) {
@@ -40,6 +42,9 @@ fun EmulatorWindow(
         Menu("Options") {
             Item( if (showDebugger) "Hide Debugger" else "Show Debugger", onClick = {
                 onDebugger()
+            })
+            Item( if (soundEnabled) "Mute" else "Unmute", onClick = {
+                onMute()
             })
         }
     }

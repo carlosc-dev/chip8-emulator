@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.experimental.and
 
 @ExperimentalUnsignedTypes
-open class Chip8(var showLogs: Boolean) {
+open class Chip8(var showLogs: Boolean, var soundEnabled: Boolean) {
     var onLog: ((String) -> Unit)? = null
     var onPrintScreen: ((IntArray) -> Unit)? = null
 
@@ -17,15 +17,15 @@ open class Chip8(var showLogs: Boolean) {
     val FONT_START_ADDRESS = 0x50
     val VIDEO_WIDTH = 64
     val VIDEO_HEIGHT = 32
-    var cpuClockHz: Long = 500
+    var cpuClockHz: Long = 600
     var PC = START_PC  // program counter
     var memory = UByteArray (4096) // 0xFFF
     var keys = IntArray(2000)
-    var currentKey = 0
+    var currentKey = -1
     var V = IntArray(16) // register
-    var i = 0     // index register
+    var i = 0      // index register
     var stack = IntArray(16)
-    var SP = 0   // stack pointer
+    var SP = 0     // stack pointer
     var ST = 0     // sound timer
     var DT = 0     // delay timer
     var screen = IntArray(VIDEO_WIDTH * VIDEO_HEIGHT)
@@ -45,7 +45,7 @@ open class Chip8(var showLogs: Boolean) {
         PC = START_PC
         memory = UByteArray (4096) // 0xFFF
         keys = IntArray(1000)
-        currentKey = 0
+        currentKey = -1
         V = IntArray(16) // 0xFF
         i = 0
         stack = IntArray(16)
@@ -81,7 +81,12 @@ open class Chip8(var showLogs: Boolean) {
             // Decrement the delay timer if it's been set
             if (DT > 0) DT--
             // Decrement the sound timer if it's been set
-            if (ST > 0) ST--
+            if (ST > 0) {
+                ST--
+                if (soundEnabled) {
+                    playSound()
+                }
+            }
         }
 
         cpuFuture = executor.scheduleAtFixedRate(cpuTick,0, 1_000_000L / cpuClockHz, TimeUnit.MICROSECONDS)
@@ -134,7 +139,7 @@ open class Chip8(var showLogs: Boolean) {
     }
 
     fun clearKey(key: Int) {
-        currentKey = 0
+        currentKey = -1
         keys[key] = 0
         log("key released $key")
     }

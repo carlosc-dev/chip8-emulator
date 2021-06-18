@@ -374,7 +374,7 @@ private fun setXtoDelayTimer(chip8: Chip8, opcode: Opcode) {
  * 0xFx0A - wait for key press, store key in VX
  */
 private fun waitForKey(chip8: Chip8, opcode: Opcode) {
-    if (chip8.currentKey == 0) {
+    if (chip8.currentKey == -1) {
         chip8.PC -= 2
     } else {
         chip8.V[opcode.x] = chip8.currentKey
