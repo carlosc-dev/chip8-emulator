@@ -74,7 +74,9 @@ fun main() {
                 }
             },
             onPlay = { path ->
-                val game = File(path).inputStream()
+                val classloader = Thread.currentThread().contextClassLoader
+                val game = classloader.getResourceAsStream(path)
+
                 chip8.loadRoom(game)
                 playing = true
                 paused = false
